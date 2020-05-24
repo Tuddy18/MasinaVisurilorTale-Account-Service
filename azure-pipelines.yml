@@ -30,6 +30,7 @@ stages:
         tags: |
           $(tag)
           $(imageName):prototype
+        arguments: -t $(imageName):prototype
     - task: Docker@2
       displayName: Push image
       inputs:
