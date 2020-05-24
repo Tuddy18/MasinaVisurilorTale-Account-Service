@@ -15,18 +15,26 @@ defmodule Accounts.AuthPlug do
 
         conn = conn |> assign(:auth_service, service)
 
-        jwt_compact = conn
+        auth_header = conn
                 |> get_req_header("authorization")
                 |> List.first()
-                |> String.split(" ")
-                |> List.last()
+        Logger.debug inspect(auth_header)
 
-        case Accounts.Auth.validate_token(service, jwt_compact) do
-          {:ok, _} -> conn
-          {:error, _} ->
-            Accounts.Auth.stop(service)
-            conn |> forbidden
+        case auth_header do
+          nil ->
+            send_resp(conn, 402, "No authorization token found!") |> halt
+          raw_token ->
+            jwt_compact = raw_token
+                      |> String.split(" ")
+                      |> List.last()
+                case Accounts.Auth.validate_token(service, jwt_compact) do
+                  {:ok, _} -> conn
+                  {:error, _} ->
+                  Accounts.Auth.stop(service)
+                  conn |> forbidden
+              end
         end
+
     end
   end
 

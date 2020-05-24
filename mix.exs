@@ -32,7 +32,8 @@ defmodule Accounts.MixProject do
       {:cors_plug, "~> 1.5"},
 #      {:myxql, "~> 0.3.0"},
     {:ecto, "~> 2.0"},
-    {:mariaex, "~> 0.7"}
+    {:mariaex, "~> 0.7"},
+    {:safetybox, "~> 0.1.2" }
     ]
   end
 end

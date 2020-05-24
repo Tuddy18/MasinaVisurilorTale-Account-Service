@@ -19,3 +19,8 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/minimal_server](https://hexdocs.pm/minimal_server).
 
+RUN ELIXIR APP:
+mix do deps.get, deps.compile, compile
+
+mix run --no-halt
+

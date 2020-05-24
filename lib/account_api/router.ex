@@ -6,6 +6,7 @@ defmodule Accounts.Router do
 
   alias Accounts.Auth
   require Logger
+  alias SafetyBox
 
   plug(Plug.Logger, log: :debug)
   @skip_token_verification %{jwt_skip: true}
@@ -20,10 +21,17 @@ defmodule Accounts.Router do
       Map.get(conn.params, "username", nil),
       Map.get(conn.params, "password", nil)
     }
-    account = Accounts.Repo.one(from d in Accounts.Account, where: d."Username" == ^username and d."Password" == ^password)
+
+    account = Accounts.Repo.one(from d in Accounts.Account, where: d."Username" == ^username)
     Logger.debug inspect(account)
 
-    flag = case account != nil  do
+    pass_key  = Application.get_env(:accounts, :pass_encrypt_key)
+    encrypted_pass = account."Password"
+    decrypted_pass = Safetybox.decrypt(encrypted_pass, pass_key)
+    Logger.debug inspect(decrypted_pass)
+
+
+    flag = case decrypted_pass == password  do
        true ->
         {:ok, auth_service} = Accounts.Auth.start_link
         Logger.debug inspect(auth_service)
@@ -61,6 +69,48 @@ defmodule Accounts.Router do
         |> send_resp(400, Poison.encode!(%{:message => "token was not deleted"}))
     end
   end
+
+  post "/register", private: @skip_token_verification do
+    Logger.debug inspect(conn.body_params)
+
+    {username, password, retyped_password} = {
+      Map.get(conn.body_params, "username", nil),
+      Map.get(conn.body_params, "password", nil),
+      Map.get(conn.body_params, "retyped_password", nil)
+    }
+
+    pass_key  = Application.get_env(:accounts, :pass_encrypt_key)
+    encrypted_pass = Safetybox.encrypt(password, pass_key)
+
+    Logger.debug inspect(encrypted_pass)
+
+    cond do
+      is_nil(username) ->
+        conn
+        |> put_status(400)
+        |> assign(:jsonapi, %{"error" => "'username' field must be provided"})
+      is_nil(password) ->
+        conn
+        |> put_status(400)
+        |> assign(:jsonapi, %{"error" => "'password' field must be provided"})
+      true ->
+        case %Account{
+          Username: username,
+          Password: encrypted_pass
+        } |> Accounts.Repo.insert do
+          {:ok, new_profile} ->
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(201, Poison.encode!(%{:data => new_profile}))
+          :error ->
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(507, Poison.encode!(%{"error" => "An unexpected error happened"}))
+
+        end
+    end
+  end
+
 
   post "/validate-token", private: @skip_token_verification do
     token = Map.get(conn.params, "token", nil)
@@ -119,5 +169,22 @@ defmodule Accounts.Router do
              end
          end
   end
+
+  delete "/delete" do
+      id = Map.get(conn.params, "id", nil)
+
+      profile = Accounts.Repo.get(Profiles.Account, id)
+      case Accounts.Repo.delete profile do
+        {:ok, struct}       ->
+          conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(201, Poison.encode!(%{:data => struct}))
+        {:error, changeset} ->
+          conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(507, Poison.encode!(%{"error" => "An unexpected error happened"}))
+        end
+  end
+
 
 end

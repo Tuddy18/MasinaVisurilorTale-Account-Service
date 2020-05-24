@@ -9,6 +9,7 @@ config :accounts, Accounts.Endpoint,
 
 config :accounts,
   app_secret_key: "secret",
+  pass_encrypt_key: "secret_key",
   jwt_validity: 2,
   api_host: "localhost",
   api_version: 2,
