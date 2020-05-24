@@ -11,6 +11,7 @@ resources:
 variables:
   tag: '$(Build.BuildId)'
   imageName: 'tuddy18/elixir_account_service:prototype'
+  dockerHub: 'masinavisurilorcontainerregistry'
 
 stages:
 - stage: Build
